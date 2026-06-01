@@ -7,7 +7,7 @@
 
 static void usage(void) {
     puts("taste [--db graph.sqlite] command ...");
-    puts("commands: recommend, explain, graph inspect, feedback, vault import|export|validate|build-db, pack add|validate, graph build, import wikipedia|wikidata, expand, edges candidates|evidence|review");
+    puts("commands: recommend, explain, graph inspect, feedback, vault import|export|validate|build-db, pack add|validate, graph build, import wikipedia|wikidata, expand, edges candidates|evidence|review, serve");
     puts("importer examples: bun importers/wikidata.ts --artist \"Cocteau Twins\" --out vault && taste vault import vault");
 }
 
@@ -119,6 +119,10 @@ int main(int argc, char **argv) {
         int r = has_arg(argc, argv, "--rating");
         if (r && r + 1 < argc) rating = argv[r + 1];
         rc = db_record_feedback(&tdb, argv[i + 1], argv[i + 2], rating);
+    } else if (strcmp(argv[i], "serve") == 0) {
+        const char *host = arg_value(argc, argv, "--host");
+        const char *port_arg = arg_value(argc, argv, "--port");
+        rc = serve_web(&tdb, host ? host : "127.0.0.1", port_arg ? atoi(port_arg) : 8765);
     } else if (strcmp(argv[i], "vault") == 0 && i + 2 < argc) {
         if (strcmp(argv[i + 1], "import") == 0 || strcmp(argv[i + 1], "build-db") == 0) rc = vault_import_path(&tdb, argv[i + 2]);
         else if (strcmp(argv[i + 1], "export") == 0) rc = vault_export(&tdb, argv[i + 2]);

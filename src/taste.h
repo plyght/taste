@@ -49,5 +49,6 @@ int explain_edge(TasteDB *tdb, const char *source, const char *target, bool json
 int inspect_graph(TasteDB *tdb, const char *artist, bool json);
 int edge_candidates(TasteDB *tdb, int limit, bool json);
 int edge_review_file(TasteDB *tdb, const char *path);
+int serve_web(TasteDB *tdb, const char *host, int port);
 
 #endif
