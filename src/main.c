@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/wait.h>
 
 static void usage(void) {
     puts("taste [--db graph.sqlite] command ...");
@@ -13,6 +14,48 @@ static void usage(void) {
 static int has_arg(int argc, char **argv, const char *flag) {
     for (int i = 0; i < argc; i++) if (strcmp(argv[i], flag) == 0) return i;
     return 0;
+}
+
+static const char *arg_value(int argc, char **argv, const char *flag) {
+    int index = has_arg(argc, argv, flag);
+    if (!index || index + 1 >= argc) return NULL;
+    return argv[index + 1];
+}
+
+static char *shell_quote(const char *value) {
+    size_t extra = 3;
+    for (const char *p = value; *p; p++) extra += *p == '\'' ? 4 : 1;
+    char *out = calloc(extra, 1);
+    char *w = out;
+    *w++ = '\'';
+    for (const char *p = value; *p; p++) {
+        if (*p == '\'') {
+            memcpy(w, "'\\''", 4);
+            w += 4;
+        } else {
+            *w++ = *p;
+        }
+    }
+    *w++ = '\'';
+    *w = 0;
+    return out;
+}
+
+static int run_importer(TasteDB *tdb, const char *source, const char *artist, const char *out) {
+    char *qsource = shell_quote(source);
+    char *qartist = shell_quote(artist);
+    char *qout = shell_quote(out);
+    size_t len = strlen(qsource) + strlen(qartist) + strlen(qout) + 128;
+    char *cmd = calloc(len, 1);
+    snprintf(cmd, len, "bun importers/%s.ts --artist %s --out %s", source, qartist, qout);
+    int status = system(cmd);
+    int rc = status == -1 || !WIFEXITED(status) || WEXITSTATUS(status) != 0;
+    if (!rc) rc = vault_import_path(tdb, out);
+    free(qsource);
+    free(qartist);
+    free(qout);
+    free(cmd);
+    return rc;
 }
 
 int main(int argc, char **argv) {
@@ -59,9 +102,23 @@ int main(int argc, char **argv) {
         else if (strcmp(argv[i + 1], "validate") == 0) rc = vault_validate_path(argv[i + 2]);
         else usage();
     } else if (strcmp(argv[i], "import") == 0 && i + 1 < argc) {
-        puts("network importers are not included in milestone 1; use vault import or pack add");
-    } else if (strcmp(argv[i], "expand") == 0) {
-        puts("lazy network expansion is not included in milestone 1; use pack add for local expansion");
+        const char *artist = arg_value(argc, argv, "--artist");
+        const char *out = arg_value(argc, argv, "--out");
+        if (!out) out = "vault";
+        if (!artist) {
+            fprintf(stderr, "missing --artist\n");
+            rc = 1;
+        } else if (strcmp(argv[i + 1], "wikidata") == 0 || strcmp(argv[i + 1], "wikipedia") == 0) {
+            rc = run_importer(&tdb, argv[i + 1], artist, out);
+        } else {
+            usage();
+            rc = 1;
+        }
+    } else if (strcmp(argv[i], "expand") == 0 && i + 1 < argc) {
+        const char *out = arg_value(argc, argv, "--out");
+        if (!out) out = "vault";
+        rc = run_importer(&tdb, "wikidata", argv[i + 1], out);
+        if (!rc) rc = run_importer(&tdb, "wikipedia", argv[i + 1], out);
     } else {
         usage();
         rc = 1;
