@@ -70,6 +70,7 @@ bun importers/wikipedia.ts --artist "Slowdive" --out vault
 ./taste --db graph.sqlite pack add packs/shoegaze
 ./taste --db graph.sqlite vault export vault-export
 ./taste --db graph.sqlite vault import vault-export
+./taste --db graph.sqlite vault diff vault-export
 ```
 
 ## Review workflow

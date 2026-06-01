@@ -142,6 +142,51 @@ int vault_validate_path(const char *path) {
     return bad ? 1 : 0;
 }
 
+int vault_diff(TasteDB *tdb, const char *path) {
+    char artists[4096];
+    snprintf(artists, sizeof(artists), "%s/artists", path);
+    DIR *d = opendir(artists);
+    if (!d) return 1;
+    struct dirent *ent;
+    int missing_db = 0, changed = 0, checked = 0;
+    while ((ent = readdir(d))) {
+        if (ent->d_name[0] == '.' || !strstr(ent->d_name, ".md")) continue;
+        char file[4096];
+        snprintf(file, sizeof(file), "%s/%s", artists, ent->d_name);
+        ArtistNote note = {0};
+        if (parse_artist_file(file, &note)) {
+            fprintf(stderr, "invalid artist note: %s\n", file);
+            changed++;
+        } else {
+            int id = db_artist_id(tdb, note.name);
+            if (!id) {
+                printf("missing-db artist %s\n", note.name);
+                missing_db++;
+            }
+            checked++;
+        }
+        free_artist_note(&note);
+    }
+    closedir(d);
+    sqlite3_stmt *st;
+    sqlite3_prepare_v2(tdb->db, "SELECT name FROM artists ORDER BY name", -1, &st, NULL);
+    int missing_vault = 0;
+    while (sqlite3_step(st) == SQLITE_ROW) {
+        const char *name = (const char *)sqlite3_column_text(st, 0);
+        char *slug = slugify(name);
+        char file[4096];
+        snprintf(file, sizeof(file), "%s/%s.md", artists, slug);
+        if (access(file, F_OK) != 0) {
+            printf("missing-vault artist %s\n", name);
+            missing_vault++;
+        }
+        free(slug);
+    }
+    sqlite3_finalize(st);
+    printf("checked %d vault artists, missing-db %d, missing-vault %d, invalid %d\n", checked, missing_db, missing_vault, changed);
+    return missing_db || missing_vault || changed ? 1 : 0;
+}
+
 int vault_export(TasteDB *tdb, const char *path) {
     char artists[4096];
     mkdir(path, 0755);

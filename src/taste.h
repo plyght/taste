@@ -44,6 +44,7 @@ void free_artist_note(ArtistNote *note);
 int vault_import_path(TasteDB *tdb, const char *path);
 int vault_validate_path(const char *path);
 int vault_export(TasteDB *tdb, const char *path);
+int vault_diff(TasteDB *tdb, const char *path);
 int recommend_artists(TasteDB *tdb, char **seeds, int seed_count, const char *mode, int limit, bool json);
 int explain_edge(TasteDB *tdb, const char *source, const char *target, bool json);
 int inspect_graph(TasteDB *tdb, const char *artist, bool json);

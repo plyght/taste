@@ -127,6 +127,7 @@ int main(int argc, char **argv) {
         if (strcmp(argv[i + 1], "import") == 0 || strcmp(argv[i + 1], "build-db") == 0) rc = vault_import_path(&tdb, argv[i + 2]);
         else if (strcmp(argv[i + 1], "export") == 0) rc = vault_export(&tdb, argv[i + 2]);
         else if (strcmp(argv[i + 1], "validate") == 0) rc = vault_validate_path(argv[i + 2]);
+        else if (strcmp(argv[i + 1], "diff") == 0) rc = vault_diff(&tdb, argv[i + 2]);
         else usage();
     } else if (strcmp(argv[i], "pack") == 0 && i + 2 < argc) {
         if (strcmp(argv[i + 1], "add") == 0) rc = vault_import_path(&tdb, argv[i + 2]);

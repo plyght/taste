@@ -1,0 +1,11 @@
+taste
+test.sqlite
+graph.sqlite
+*.sqlite
+src/*.o
+.cache/
+vault/
+vault-export/
+tmp-vault/
+corrections.json
+candidates.json
