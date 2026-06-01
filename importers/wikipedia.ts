@@ -1,15 +1,10 @@
-import { outDir, requireArtist, unique, writeArtistNote } from "./common";
+import { cachedJson, cacheDir, outDir, requireArtist, unique, writeArtistNote } from "./common";
 
 const args = Bun.argv.slice(2);
 const artist = requireArtist(args);
 const out = outDir(args);
+const cache = cacheDir(args);
 const api = "https://en.wikipedia.org/w/api.php";
-
-async function getJson<T>(url: string): Promise<T> {
-  const response = await fetch(url, { headers: { "user-agent": "taste/0.1" } });
-  if (!response.ok) throw new Error(`${response.status} ${response.statusText}: ${url}`);
-  return response.json() as Promise<T>;
-}
 
 type SearchResponse = { query?: { search?: { title: string }[] } };
 type PageResponse = {
@@ -27,12 +22,12 @@ type PageResponse = {
 };
 
 const searchUrl = `${api}?action=query&list=search&srsearch=${encodeURIComponent(artist)}&format=json&srlimit=1`;
-const search = await getJson<SearchResponse>(searchUrl);
+const search = await cachedJson<SearchResponse>(cache, `wikipedia-search-${artist}`, searchUrl);
 const title = search.query?.search?.[0]?.title;
 if (!title) throw new Error(`no Wikipedia page found for ${artist}`);
 
 const pageUrl = `${api}?action=query&titles=${encodeURIComponent(title)}&prop=categories|links|pageprops&cllimit=100&pllimit=100&format=json`;
-const pageJson = await getJson<PageResponse>(pageUrl);
+const pageJson = await cachedJson<PageResponse>(cache, `wikipedia-page-${title}`, pageUrl);
 const page = Object.values(pageJson.query?.pages ?? {})[0];
 if (!page) throw new Error(`missing Wikipedia page for ${title}`);
 

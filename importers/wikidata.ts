@@ -1,16 +1,11 @@
-import { outDir, requireArtist, unique, writeArtistNote } from "./common";
+import { cachedJson, cacheDir, outDir, requireArtist, unique, writeArtistNote } from "./common";
 
 const args = Bun.argv.slice(2);
 const artist = requireArtist(args);
 const out = outDir(args);
+const cache = cacheDir(args);
 
 const endpoint = "https://www.wikidata.org/w/api.php";
-
-async function getJson<T>(url: string): Promise<T> {
-  const response = await fetch(url, { headers: { "user-agent": "taste/0.1" } });
-  if (!response.ok) throw new Error(`${response.status} ${response.statusText}: ${url}`);
-  return response.json() as Promise<T>;
-}
 
 type SearchResponse = { search?: { id: string; label: string }[] };
 type EntityResponse = {
@@ -39,7 +34,7 @@ async function labels(ids: string[]): Promise<Map<string, string>> {
   for (let i = 0; i < uniqueIds.length; i += 50) {
     const chunk = uniqueIds.slice(i, i + 50);
     const url = `${endpoint}?action=wbgetentities&ids=${encodeURIComponent(chunk.join("|"))}&props=labels&languages=en&format=json`;
-    const json = await getJson<LabelResponse>(url);
+    const json = await cachedJson<LabelResponse>(cache, `wikidata-labels-${chunk.join("-")}`, url);
     for (const [id, entity] of Object.entries(json.entities)) {
       const label = entity.labels?.en?.value;
       if (label) result.set(id, label);
@@ -49,12 +44,12 @@ async function labels(ids: string[]): Promise<Map<string, string>> {
 }
 
 const searchUrl = `${endpoint}?action=wbsearchentities&search=${encodeURIComponent(artist)}&language=en&format=json&limit=1`;
-const search = await getJson<SearchResponse>(searchUrl);
+const search = await cachedJson<SearchResponse>(cache, `wikidata-search-${artist}`, searchUrl);
 const qid = search.search?.[0]?.id;
 if (!qid) throw new Error(`no Wikidata entity found for ${artist}`);
 
 const entityUrl = `${endpoint}?action=wbgetentities&ids=${encodeURIComponent(qid)}&props=labels|aliases|claims|sitelinks&languages=en&format=json`;
-const entityJson = await getJson<EntityResponse>(entityUrl);
+const entityJson = await cachedJson<EntityResponse>(cache, `wikidata-entity-${qid}`, entityUrl);
 const entity = entityJson.entities[qid];
 if (!entity) throw new Error(`missing Wikidata entity ${qid}`);
 

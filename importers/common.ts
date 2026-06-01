@@ -70,3 +70,21 @@ export function requireArtist(args: string[]): string {
 export function outDir(args: string[]): string {
   return argValue(args, "--out") ?? "vault";
 }
+
+export function cacheDir(args: string[]): string {
+  return argValue(args, "--cache") ?? ".cache/taste";
+}
+
+export async function cachedJson<T>(cache: string, key: string, url: string): Promise<T> {
+  await Bun.$`mkdir -p ${cache}`;
+  const file = `${cache.replace(/\/$/, "")}/${slugify(key)}.json`;
+  const cached = Bun.file(file);
+  if (await cached.exists()) {
+    return cached.json() as Promise<T>;
+  }
+  const response = await fetch(url, { headers: { "user-agent": "taste/0.1" } });
+  if (!response.ok) throw new Error(`${response.status} ${response.statusText}: ${url}`);
+  const json = (await response.json()) as T;
+  await Bun.write(file, JSON.stringify(json, null, 2));
+  return json;
+}
