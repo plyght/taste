@@ -63,6 +63,13 @@ static char *param(char *query, const char *key) {
     return "";
 }
 
+static char *param_dup(const char *query, const char *key) {
+    char *copy = strdup_safe(query ? query : "");
+    char *value = strdup_safe(param(copy, key));
+    free(copy);
+    return value;
+}
+
 static char *recommend_html(TasteDB *tdb, const char *a, const char *b, const char *c, const char *mode) {
     char seed_ids[256] = "0";
     const char *seeds[3] = {a, b, c};
@@ -114,10 +121,10 @@ static char *recommend_html(TasteDB *tdb, const char *a, const char *b, const ch
 }
 
 static char *page(TasteDB *tdb, char *query) {
-    char *a = param(query, "a");
-    char *b = param(query, "b");
-    char *c = param(query, "c");
-    char *mode = param(query, "mode");
+    char *a = param_dup(query, "a");
+    char *b = param_dup(query, "b");
+    char *c = param_dup(query, "c");
+    char *mode = param_dup(query, "mode");
     FILE *f = tmpfile();
     fputs("HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\n\r\n<!doctype html><html><head><meta name='viewport' content='width=device-width,initial-scale=1'><title>Taste</title><style>body{font-family:ui-sans-serif,system-ui;margin:0;background:#f6f1e8;color:#17130f}main{max-width:880px;margin:0 auto;padding:56px 24px}.card,.hero{background:#fffaf0;border:1px solid #251a1022;border-radius:24px;padding:24px;box-shadow:0 18px 50px #27140012}h1{font-size:64px;letter-spacing:-.06em;margin:0 0 8px}h2{font-size:48px;letter-spacing:-.05em;margin:0}input,select,button{font:inherit;border-radius:999px;border:1px solid #251a1033;padding:12px 16px;background:white}button{background:#17130f;color:white;cursor:pointer}form.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.eyebrow{text-transform:uppercase;letter-spacing:.16em;font-size:12px;color:#7a4b2b}.results{margin-top:24px}li{margin:12px 0}span{color:#6b6258;display:block}@media(max-width:760px){form.grid{grid-template-columns:1fr}h1{font-size:44px}}</style></head><body><main><h1>Taste</h1><p>Enter three artists. Get one graph-backed recommendation.</p><section class='card'><form class='grid' method='GET'><input name='a' placeholder='Cocteau Twins' value='", f);
     html_escape(f, a);
@@ -132,6 +139,10 @@ static char *page(TasteDB *tdb, char *query) {
         free(rec);
     }
     fputs("</main></body></html>", f);
+    free(a);
+    free(b);
+    free(c);
+    free(mode);
     long len;
     fseek(f, 0, SEEK_END);
     len = ftell(f);
@@ -143,9 +154,11 @@ static char *page(TasteDB *tdb, char *query) {
 }
 
 static char *feedback_response(TasteDB *tdb, char *body) {
-    char *artist = param(body, "artist");
-    char *rating = param(body, "rating");
+    char *artist = param_dup(body, "artist");
+    char *rating = param_dup(body, "rating");
     db_record_feedback(tdb, "web", artist, rating);
+    free(artist);
+    free(rating);
     return strdup_safe("HTTP/1.1 303 See Other\r\nLocation: /\r\nContent-Length: 0\r\n\r\n");
 }
 

@@ -31,22 +31,21 @@ const pageJson = await cachedJson<PageResponse>(cache, `wikipedia-page-${title}`
 const page = Object.values(pageJson.query?.pages ?? {})[0];
 if (!page) throw new Error(`missing Wikipedia page for ${title}`);
 
-const categoryText = unique((page.categories ?? []).map((category) => category.title.replace(/^Category:/, "")));
 const linkText = unique((page.links ?? []).map((link) => link.title));
-const genres = categoryText
-  .filter((category) => /music|rock|pop|metal|electronic|ambient|shoegaze|punk|folk|jazz|hip hop|wave|indie/i.test(category))
-  .map((category) => category.replace(/ musicians$| groups$| bands$/i, ""))
-  .slice(0, 20);
-const associated = linkText
-  .filter((link) => !/List of|Discography|Records|MusicBrainz|Wikidata|ISBN/i.test(link))
-  .slice(0, 20);
+const labels = unique(
+  linkText.filter(
+    (link) =>
+      /records|recordings/i.test(link) &&
+      !/identifier|discography|list of|musicbrainz|wikidata|allmusic|album|single/i.test(link),
+  ),
+).slice(0, 10);
 const file = await writeArtistNote(out, {
   name: page.title,
   wikidata: page.pageprops?.wikibase_item,
   aliases: title === artist ? [] : [artist],
-  genres: unique(genres),
-  labels: unique(linkText.filter((link) => /Records|Recordings|Entertainment|Music$/i.test(link)).slice(0, 10)),
-  associated: unique(associated),
+  genres: [],
+  labels,
+  associated: [],
   sources: [`wikipedia-${title.replace(/\s+/g, "_")}`],
 });
 
