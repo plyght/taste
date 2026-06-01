@@ -1,0 +1,7 @@
+id: shoegaze
+name: Shoegaze Starter Pack
+version: 0.1.0
+license: CC0-1.0
+description: Small curated graph for shoegaze and adjacent dream pop artists.
+sources:
+  - manual

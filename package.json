@@ -1,0 +1,12 @@
+{
+  "name": "taste",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "format": "bunx prettier --write importers/*.ts",
+    "lint": "bun --check importers/*.ts",
+    "typecheck": "bun --check importers/*.ts",
+    "test": "bun --check importers/*.ts"
+  }
+}
