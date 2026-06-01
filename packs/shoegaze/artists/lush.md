@@ -10,7 +10,6 @@ genres:
 labels:
   - 4AD
 associated:
-  - Cocteau Twins
 ---
 
 # Lush

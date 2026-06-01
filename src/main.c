@@ -41,13 +41,13 @@ static char *shell_quote(const char *value) {
     return out;
 }
 
-static int run_importer(TasteDB *tdb, const char *source, const char *artist, const char *out) {
+static int run_importer_with_flags(TasteDB *tdb, const char *source, const char *artist, const char *out, const char *flags) {
     char *qsource = shell_quote(source);
     char *qartist = shell_quote(artist);
     char *qout = shell_quote(out);
-    size_t len = strlen(qsource) + strlen(qartist) + strlen(qout) + 128;
+    size_t len = strlen(qsource) + strlen(qartist) + strlen(qout) + (flags ? strlen(flags) : 0) + 128;
     char *cmd = calloc(len, 1);
-    snprintf(cmd, len, "bun importers/%s.ts --artist %s --out %s", source, qartist, qout);
+    snprintf(cmd, len, "bun importers/%s.ts --artist %s --out %s %s", source, qartist, qout, flags ? flags : "");
     int status = system(cmd);
     int rc = status == -1 || !WIFEXITED(status) || WEXITSTATUS(status) != 0;
     if (!rc) rc = vault_import_path(tdb, out);
@@ -55,6 +55,31 @@ static int run_importer(TasteDB *tdb, const char *source, const char *artist, co
     free(qartist);
     free(qout);
     free(cmd);
+    return rc;
+}
+
+static int run_importer(TasteDB *tdb, const char *source, const char *artist, const char *out) {
+    return run_importer_with_flags(tdb, source, artist, out, "");
+}
+
+static int expand_artist(TasteDB *tdb, const char *artist, const char *out, int depth) {
+    int rc = run_importer_with_flags(tdb, "wikidata", artist, out, "--related");
+    if (!rc) rc = run_importer(tdb, "wikipedia", artist, out);
+    if (rc || depth <= 1) return rc;
+
+    int artist_id = db_artist_id(tdb, artist);
+    if (!artist_id) return rc;
+    sqlite3_stmt *st;
+    sqlite3_prepare_v2(tdb->db, "SELECT value FROM artist_facts WHERE artist_id=? AND kind='associated' ORDER BY value LIMIT 12", -1, &st, NULL);
+    sqlite3_bind_int(st, 1, artist_id);
+    while (sqlite3_step(st) == SQLITE_ROW) {
+        const char *neighbor = (const char *)sqlite3_column_text(st, 0);
+        if (!neighbor || !*neighbor || db_artist_id(tdb, neighbor)) continue;
+        int child = run_importer(tdb, "wikidata", neighbor, out);
+        if (!child) child = run_importer(tdb, "wikipedia", neighbor, out);
+        rc |= child;
+    }
+    sqlite3_finalize(st);
     return rc;
 }
 
@@ -148,9 +173,16 @@ int main(int argc, char **argv) {
         }
     } else if (strcmp(argv[i], "expand") == 0 && i + 1 < argc) {
         const char *out = arg_value(argc, argv, "--out");
+        const char *depth_arg = arg_value(argc, argv, "--depth");
+        int depth = depth_arg ? atoi(depth_arg) : 1;
         if (!out) out = "vault";
-        rc = run_importer(&tdb, "wikidata", argv[i + 1], out);
-        if (!rc) rc = run_importer(&tdb, "wikipedia", argv[i + 1], out);
+        for (int j = i + 1; j < argc; j++) {
+            if (strcmp(argv[j], "--out") == 0 || strcmp(argv[j], "--depth") == 0) {
+                j++;
+                continue;
+            }
+            rc |= expand_artist(&tdb, argv[j], out, depth);
+        }
     } else {
         usage();
         rc = 1;

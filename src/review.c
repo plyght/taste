@@ -58,8 +58,19 @@ int edge_candidates(TasteDB *tdb, int limit, bool json) {
         const char *rel = (const char *)sqlite3_column_text(st, 3);
         double weight = sqlite3_column_double(st, 4);
         const char *evidence = (const char *)sqlite3_column_text(st, 5);
-        if (json) printf("%s  {\"id\":%d,\"source_artist\":\"%s\",\"target_artist\":\"%s\",\"relationship\":\"%s\",\"weight\":%.2f,\"evidence\":\"%s\"}\n", n ? ",\n" : "", id, source, target, rel, weight, evidence);
-        else printf("%d %s -> %s %s %.2f %s\n", id, source, target, rel, weight, evidence);
+        if (json) {
+            printf("%s  {\"id\":%d,\"source_artist\":", n ? ",\n" : "", id);
+            print_json_string(stdout, source);
+            printf(",\"target_artist\":");
+            print_json_string(stdout, target);
+            printf(",\"relationship\":");
+            print_json_string(stdout, rel);
+            printf(",\"weight\":%.2f,\"evidence\":", weight);
+            print_json_string(stdout, evidence);
+            printf("}\n");
+        } else {
+            printf("%d %s -> %s %s %.2f %s\n", id, source, target, rel, weight, evidence);
+        }
         n++;
     }
     if (json) printf("]\n");

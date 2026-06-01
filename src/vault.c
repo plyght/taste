@@ -193,15 +193,32 @@ int vault_export(TasteDB *tdb, const char *path) {
     snprintf(artists, sizeof(artists), "%s/artists", path);
     mkdir(artists, 0755);
     sqlite3_stmt *st;
-    sqlite3_prepare_v2(tdb->db, "SELECT name,slug,wikidata,musicbrainz FROM artists ORDER BY name", -1, &st, NULL);
+    sqlite3_prepare_v2(tdb->db, "SELECT id,name,slug,wikidata,musicbrainz FROM artists ORDER BY name", -1, &st, NULL);
     while (sqlite3_step(st) == SQLITE_ROW) {
-        const char *name = (const char *)sqlite3_column_text(st, 0), *slug = (const char *)sqlite3_column_text(st, 1);
-        const char *wikidata = (const char *)sqlite3_column_text(st, 2), *mb = (const char *)sqlite3_column_text(st, 3);
+        int id = sqlite3_column_int(st, 0);
+        const char *name = (const char *)sqlite3_column_text(st, 1), *slug = (const char *)sqlite3_column_text(st, 2);
+        const char *wikidata = (const char *)sqlite3_column_text(st, 3), *mb = (const char *)sqlite3_column_text(st, 4);
         char file[4096];
         snprintf(file, sizeof(file), "%s/%s.md", artists, slug);
         FILE *f = fopen(file, "w");
         if (!f) continue;
-        fprintf(f, "---\ntype: artist\nname: %s\nwikidata: %s\nmusicbrainz: %s\naliases:\ngenres:\nlabels:\nassociated:\n---\n\n# %s\n", name, wikidata ? wikidata : "", mb ? mb : "", name);
+        fprintf(f, "---\ntype: artist\nname: %s\nwikidata: %s\nmusicbrainz: %s\naliases:\n", name, wikidata ? wikidata : "", mb ? mb : "");
+        sqlite3_stmt *facts;
+        sqlite3_prepare_v2(tdb->db, "SELECT alias FROM artist_aliases WHERE artist_id=? ORDER BY alias", -1, &facts, NULL);
+        sqlite3_bind_int(facts, 1, id);
+        while (sqlite3_step(facts) == SQLITE_ROW) fprintf(f, "  - %s\n", (const char *)sqlite3_column_text(facts, 0));
+        sqlite3_finalize(facts);
+        const char *kinds[] = {"genre", "label", "associated"};
+        const char *headers[] = {"genres", "labels", "associated"};
+        for (size_t i = 0; i < 3; i++) {
+            fprintf(f, "%s:\n", headers[i]);
+            sqlite3_prepare_v2(tdb->db, "SELECT value FROM artist_facts WHERE artist_id=? AND kind=? ORDER BY value", -1, &facts, NULL);
+            sqlite3_bind_int(facts, 1, id);
+            sqlite3_bind_text(facts, 2, kinds[i], -1, SQLITE_TRANSIENT);
+            while (sqlite3_step(facts) == SQLITE_ROW) fprintf(f, "  - %s\n", (const char *)sqlite3_column_text(facts, 0));
+            sqlite3_finalize(facts);
+        }
+        fprintf(f, "---\n\n# %s\n", name);
         fclose(f);
     }
     sqlite3_finalize(st);

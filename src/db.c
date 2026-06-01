@@ -10,6 +10,59 @@ char *strdup_safe(const char *s) {
     return strdup(s);
 }
 
+void print_json_string(FILE *out, const char *s) {
+    fputc('"', out);
+    for (; s && *s; s++) {
+        unsigned char c = (unsigned char)*s;
+        if (c == '"' || c == '\\') {
+            fputc('\\', out);
+            fputc(c, out);
+        } else if (c == '\n') {
+            fputs("\\n", out);
+        } else if (c == '\r') {
+            fputs("\\r", out);
+        } else if (c == '\t') {
+            fputs("\\t", out);
+        } else if (c < 0x20) {
+            fprintf(out, "\\u%04x", c);
+        } else {
+            fputc(c, out);
+        }
+    }
+    fputc('"', out);
+}
+
+char *html_escape_dup(const char *s) {
+    size_t len = 1;
+    for (const char *p = s; p && *p; p++) {
+        if (*p == '&') len += 5;
+        else if (*p == '<' || *p == '>') len += 4;
+        else if (*p == '"') len += 6;
+        else len++;
+    }
+    char *out = calloc(len, 1);
+    char *w = out;
+    for (const char *p = s; p && *p; p++) {
+        if (*p == '&') {
+            memcpy(w, "&amp;", 5);
+            w += 5;
+        } else if (*p == '<') {
+            memcpy(w, "&lt;", 4);
+            w += 4;
+        } else if (*p == '>') {
+            memcpy(w, "&gt;", 4);
+            w += 4;
+        } else if (*p == '"') {
+            memcpy(w, "&quot;", 6);
+            w += 6;
+        } else {
+            *w++ = *p;
+        }
+    }
+    *w = 0;
+    return out;
+}
+
 char *slugify(const char *s) {
     size_t n = strlen(s);
     char *out = calloc(n + 1, 1);

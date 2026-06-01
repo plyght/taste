@@ -3,6 +3,7 @@
 
 #include <sqlite3.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include <stddef.h>
 
 typedef struct {
@@ -29,6 +30,7 @@ typedef struct {
     char *artist;
     double score;
     char *explanation;
+    int coverage_mask;
 } Recommendation;
 
 int db_open(TasteDB *tdb, const char *path);
@@ -40,6 +42,8 @@ int db_record_feedback(TasteDB *tdb, const char *seed_key, const char *artist, c
 int db_artist_id(TasteDB *tdb, const char *name);
 char *slugify(const char *s);
 char *strdup_safe(const char *s);
+void print_json_string(FILE *out, const char *s);
+char *html_escape_dup(const char *s);
 void free_artist_note(ArtistNote *note);
 int vault_import_path(TasteDB *tdb, const char *path);
 int vault_validate_path(const char *path);

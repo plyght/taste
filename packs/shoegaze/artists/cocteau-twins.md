@@ -11,7 +11,6 @@ labels:
   - 4AD
 associated:
   - This Mortal Coil
-  - Lush
 ---
 
 # Cocteau Twins
