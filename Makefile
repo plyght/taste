@@ -3,7 +3,7 @@ CFLAGS ?= -std=c11 -Wall -Wextra -Wpedantic -O2
 LDFLAGS ?= -lsqlite3
 PREFIX ?= /usr/local
 
-SRC = src/main.c src/db.c src/vault.c src/recommend.c
+SRC = src/main.c src/db.c src/vault.c src/recommend.c src/review.c
 OBJ = $(SRC:.c=.o)
 BIN = taste
 

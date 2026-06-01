@@ -7,7 +7,7 @@
 
 static void usage(void) {
     puts("taste [--db graph.sqlite] command ...");
-    puts("commands: recommend, explain, graph inspect, feedback, vault import|export|validate|build-db, pack add|validate, graph build, import wikipedia|wikidata, expand");
+    puts("commands: recommend, explain, graph inspect, feedback, vault import|export|validate|build-db, pack add|validate, graph build, import wikipedia|wikidata, expand, edges candidates|evidence|review");
     puts("importer examples: bun importers/wikidata.ts --artist \"Cocteau Twins\" --out vault && taste vault import vault");
 }
 
@@ -87,6 +87,33 @@ int main(int argc, char **argv) {
         rc = inspect_graph(&tdb, argv[i + 2], has_arg(argc, argv, "--json"));
     } else if (strcmp(argv[i], "graph") == 0 && i + 1 < argc && strcmp(argv[i + 1], "build") == 0) {
         puts("graph is built during vault and pack imports");
+    } else if (strcmp(argv[i], "edges") == 0 && i + 1 < argc) {
+        if (strcmp(argv[i + 1], "candidates") == 0) {
+            int limit = 50;
+            const char *limit_arg = arg_value(argc, argv, "--limit");
+            if (limit_arg) limit = atoi(limit_arg);
+            rc = edge_candidates(&tdb, limit, has_arg(argc, argv, "--json"));
+        } else if (strcmp(argv[i + 1], "evidence") == 0) {
+            const char *source = arg_value(argc, argv, "--source");
+            const char *target = arg_value(argc, argv, "--target");
+            if (!source || !target) {
+                fprintf(stderr, "missing --source or --target\n");
+                rc = 1;
+            } else {
+                rc = explain_edge(&tdb, source, target, has_arg(argc, argv, "--json"));
+            }
+        } else if (strcmp(argv[i + 1], "review") == 0) {
+            const char *file = arg_value(argc, argv, "--file");
+            if (!file) {
+                fprintf(stderr, "missing --file\n");
+                rc = 1;
+            } else {
+                rc = edge_review_file(&tdb, file);
+            }
+        } else {
+            usage();
+            rc = 1;
+        }
     } else if (strcmp(argv[i], "feedback") == 0 && i + 3 < argc) {
         const char *rating = "unknown";
         int r = has_arg(argc, argv, "--rating");

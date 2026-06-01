@@ -47,5 +47,7 @@ int vault_export(TasteDB *tdb, const char *path);
 int recommend_artists(TasteDB *tdb, char **seeds, int seed_count, const char *mode, int limit, bool json);
 int explain_edge(TasteDB *tdb, const char *source, const char *target, bool json);
 int inspect_graph(TasteDB *tdb, const char *artist, bool json);
+int edge_candidates(TasteDB *tdb, int limit, bool json);
+int edge_review_file(TasteDB *tdb, const char *path);
 
 #endif

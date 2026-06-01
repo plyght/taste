@@ -60,7 +60,8 @@ int db_init(TasteDB *tdb) {
                     "CREATE TABLE IF NOT EXISTS edges(id INTEGER PRIMARY KEY,source_id INTEGER,target_id INTEGER,relationship TEXT,weight REAL,UNIQUE(source_id,target_id,relationship));"
                     "CREATE TABLE IF NOT EXISTS edge_evidence(edge_id INTEGER,evidence TEXT,provenance TEXT,UNIQUE(edge_id,evidence));"
                     "CREATE TABLE IF NOT EXISTS recommendation_feedback(id INTEGER PRIMARY KEY,seed_key TEXT,target_id INTEGER,rating TEXT,created_at TEXT DEFAULT CURRENT_TIMESTAMP);"
-                    "CREATE TABLE IF NOT EXISTS raw_source_documents(id INTEGER PRIMARY KEY,source TEXT,key TEXT,body TEXT,created_at TEXT DEFAULT CURRENT_TIMESTAMP);");
+                    "CREATE TABLE IF NOT EXISTS raw_source_documents(id INTEGER PRIMARY KEY,source TEXT,key TEXT,body TEXT,created_at TEXT DEFAULT CURRENT_TIMESTAMP);"
+                    "CREATE TABLE IF NOT EXISTS edge_reviews(id INTEGER PRIMARY KEY,edge_id INTEGER,verdict TEXT,confidence REAL,relationship TEXT,rationale TEXT,created_at TEXT DEFAULT CURRENT_TIMESTAMP);");
 }
 
 int db_artist_id(TasteDB *tdb, const char *name) {
